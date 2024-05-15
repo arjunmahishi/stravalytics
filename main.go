@@ -2,20 +2,30 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"strconv"
 
 	strava "github.com/strava/go.strava"
 )
 
-const port = 3000 // port of local demo server
+var (
+	authenticator *strava.OAuthAuthenticator
+	server        *http.Server
 
-var authenticator *strava.OAuthAuthenticator
+	port       = flag.Int("port", 3000, "Port for the local server")
+	workers    = flag.Int("concurrency", runtime.NumCPU(), "Number of concurrent workers")
+	outputFile = flag.String("output", "activities.json", "Output file for activities")
+)
 
 func main() {
+	flag.Parse()
+	runtime.GOMAXPROCS(runtime.NumCPU()) // setup to use all the cores
+
 	clientID, err := strconv.Atoi(os.Getenv("STRAVA_CLIENT_ID"))
 	if err != nil {
 		log.Fatal("Invalid STRAVA_CLIENT_ID")
@@ -29,42 +39,37 @@ func main() {
 	// The RequestClientGenerator can be used to generate an http.RequestClient.
 	// This is usually when running on the Google App Engine platform.
 	authenticator = &strava.OAuthAuthenticator{
-		CallbackURL:            fmt.Sprintf("http://localhost:%d/exchange_token", port),
+		CallbackURL:            fmt.Sprintf("http://localhost:%d/exchange_token", *port),
 		RequestClientGenerator: nil,
 	}
 
-	http.HandleFunc("/", indexHandler)
-
 	path, err := authenticator.CallbackPath()
 	if err != nil {
-		// possibly that the callback url set above is invalid
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	http.HandleFunc(path, authenticator.HandlerFunc(oAuthSuccess, oAuthFailure))
 
-	// start the server
-	fmt.Printf("Visit http://localhost:%d/ to view the demo\n", port)
-	fmt.Printf("ctrl-c to exit")
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
-}
+	// login to strava
+	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, authenticator.AuthorizationURL("state1", "activity:read", false), http.StatusFound)
+	})
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	// you should make this a template in your real application
-	fmt.Fprintf(w, `<a href="%s">`, authenticator.AuthorizationURL("state1", "read", false))
-	fmt.Fprint(w, `<input type="button" value="Login" />`)
-	fmt.Fprint(w, `</a>`)
+	// start the server
+	fmt.Printf("Visit %s to authenticate\n", fmt.Sprintf("http://localhost:%d/login", *port))
+	server = &http.Server{Addr: fmt.Sprintf(":%d", *port)}
+	log.Fatal(server.ListenAndServe())
 }
 
 func oAuthSuccess(auth *strava.AuthorizationResponse, w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "SUCCESS:\nAt this point you can use this information to create a new user or link the account to one of your existing users\n")
+	fmt.Fprintf(w, "Successfully Authenticated\n\n")
 	fmt.Fprintf(w, "State: %s\n\n", auth.State)
-	fmt.Fprintf(w, "Access Token: %s\n\n", auth.AccessToken)
 
 	fmt.Fprintf(w, "The Authenticated Athlete (you):\n")
 	content, _ := json.MarshalIndent(auth.Athlete, "", " ")
-	fmt.Fprint(w, string(content))
+	fmt.Fprint(w, string(content), "\n\n")
+
+	go syncActivities(auth)
 }
 
 func oAuthFailure(err error, w http.ResponseWriter, r *http.Request) {
