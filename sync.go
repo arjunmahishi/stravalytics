@@ -56,21 +56,26 @@ func syncActivities(auth *strava.AuthorizationResponse) {
 		}
 
 		log.Printf("Page: %d, Activities: %d", page, len(activities))
-		if len(currPage) == 0 {
+		if len(currPage) == 0 || len(currPage) < 200 {
 			break
 		}
 
 		page++
 	}
 
-	f, err := os.OpenFile(*outputFile, os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
 	newActivities := getActivityDetails(client, activities)
 	if len(newActivities) != 0 {
+		// create a backup of the existing file
+		if err := os.Rename(*dataFile, *dataFile+".bak"); err != nil && !os.IsNotExist(err) {
+			log.Fatal(err)
+		}
+
+		f, err := os.OpenFile(*dataFile, os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer f.Close()
+
 		detailBytes, err := json.Marshal(append(allActivities, newActivities...))
 		if err != nil {
 			log.Fatal(err)
@@ -123,7 +128,7 @@ func getActivityDetails(
 }
 
 func getExistingActivity() (map[int64]bool, []*strava.ActivityDetailed, error) {
-	f, err := os.Open(*outputFile)
+	f, err := os.Open(*dataFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil, nil

@@ -51,8 +51,8 @@ CREATE TABLE IF NOT EXISTS segments (
 
 CREATE TABLE IF NOT EXISTS segment_efforts (
   id INT NOT NULL,
-  segment_id INT NOT NULL,
   activity_id INT NOT NULL,
+  segment_id INT NOT NULL,
   average_cadence FLOAT NOT NULL,
   average_heartrate FLOAT NOT NULL,
   max_heartrate FLOAT NOT NULL,

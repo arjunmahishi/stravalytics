@@ -12,7 +12,7 @@ import (
 
 func TestGetExistingActivityLookup(t *testing.T) {
 	t.Run("non existent file", func(t *testing.T) {
-		*outputFile = "non_existent.json"
+		*dataFile = "non_existent.json"
 
 		lookup, all, err := getExistingActivity()
 		assert.NoError(t, err)
@@ -21,13 +21,13 @@ func TestGetExistingActivityLookup(t *testing.T) {
 	})
 
 	t.Run("empty file", func(t *testing.T) {
-		*outputFile = "empty.json"
+		*dataFile = "empty.json"
 
 		activity := []*strava.ActivityDetailed{}
 		raw, err := json.Marshal(activity)
 		assert.NoError(t, err)
 
-		cleanup, err := provisionTestFile(*outputFile, raw)
+		cleanup, err := provisionTestFile(*dataFile, raw)
 		assert.NoError(t, err)
 		defer cleanup()
 
@@ -38,7 +38,7 @@ func TestGetExistingActivityLookup(t *testing.T) {
 	})
 
 	t.Run("non empty files", func(t *testing.T) {
-		*outputFile = "non_empty.json"
+		*dataFile = "non_empty.json"
 
 		activities := []*strava.ActivityDetailed{
 			{ActivitySummary: strava.ActivitySummary{Id: 1}},
@@ -49,7 +49,7 @@ func TestGetExistingActivityLookup(t *testing.T) {
 		raw, err := json.Marshal(activities)
 		assert.NoError(t, err)
 
-		cleanup, err := provisionTestFile(*outputFile, raw)
+		cleanup, err := provisionTestFile(*dataFile, raw)
 		assert.NoError(t, err)
 		defer cleanup()
 

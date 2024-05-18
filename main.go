@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -17,15 +18,52 @@ var (
 	authenticator *strava.OAuthAuthenticator
 	server        *http.Server
 
-	port       = flag.Int("port", 3000, "Port for the local server")
-	workers    = flag.Int("concurrency", runtime.NumCPU(), "Number of concurrent workers")
-	outputFile = flag.String("output", "activities.json", "Output file for activities")
+	port     = flag.Int("port", 3000, "Port for the local server")
+	workers  = flag.Int("concurrency", runtime.NumCPU(), "Number of concurrent workers")
+	dataFile = flag.String("data", "activities.json", "File to store activity data")
 )
 
 func main() {
 	flag.Parse()
-	runtime.GOMAXPROCS(runtime.NumCPU()) // setup to use all the cores
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
+	loadData()
+}
+
+func loadData() {
+	f, err := os.Open(*dataFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	raw, err := io.ReadAll(f)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	activities := []*strava.ActivityDetailed{}
+	if err = json.Unmarshal(raw, &activities); err != nil {
+		log.Fatal(err)
+	}
+
+	db, err := newDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	allQueries := []string{}
+	for _, activity := range activities {
+		if activity == nil {
+			continue
+		}
+
+		allQueries = append(allQueries, insertActivityQueries(activity)...)
+	}
+
+	bulkInsertData(db, allQueries)
+}
+
+func runSync() {
 	clientID, err := strconv.Atoi(os.Getenv("STRAVA_CLIENT_ID"))
 	if err != nil {
 		log.Fatal("Invalid STRAVA_CLIENT_ID")
@@ -58,7 +96,7 @@ func main() {
 	// start the server
 	fmt.Printf("Visit %s to authenticate\n", fmt.Sprintf("http://localhost:%d/login", *port))
 	server = &http.Server{Addr: fmt.Sprintf(":%d", *port)}
-	log.Fatal(server.ListenAndServe())
+	log.Println(server.ListenAndServe())
 }
 
 func oAuthSuccess(auth *strava.AuthorizationResponse, w http.ResponseWriter, r *http.Request) {
