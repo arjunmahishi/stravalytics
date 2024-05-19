@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	strava "github.com/strava/go.strava"
 )
 
@@ -21,16 +22,23 @@ var (
 	port     = flag.Int("port", 3000, "Port for the local server")
 	workers  = flag.Int("concurrency", runtime.NumCPU(), "Number of concurrent workers")
 	dataFile = flag.String("data", "activities.json", "File to store activity data")
+	dbHost   = flag.String("db-host", "localhost", "ClickHouse host")
+	dbPort   = flag.Int("db-port", 9000, "ClickHouse port")
 )
 
 func main() {
 	flag.Parse()
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	loadData()
+	db, err := newDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	loadData(db)
 }
 
-func loadData() {
+func loadData(db driver.Conn) {
 	f, err := os.Open(*dataFile)
 	if err != nil {
 		log.Fatal(err)
@@ -46,11 +54,6 @@ func loadData() {
 		log.Fatal(err)
 	}
 
-	db, err := newDB()
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	allQueries := []string{}
 	for _, activity := range activities {
 		if activity == nil {
@@ -60,7 +63,9 @@ func loadData() {
 		allQueries = append(allQueries, insertActivityQueries(activity)...)
 	}
 
+	fmt.Print("inserting data into the db")
 	bulkInsertData(db, allQueries)
+	fmt.Print("...DONE\n")
 }
 
 func runSync() {

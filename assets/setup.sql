@@ -1,5 +1,9 @@
+CREATE DATABASE IF NOT EXISTS strava;
+
+USE strava;
+
 CREATE TABLE IF NOT EXISTS activities (
-  id INT NOT NULL,
+  id BIGINT NOT NULL,
   name VARCHAR NOT NULL,
   distance FLOAT NOT NULL,
   moving_time INT NOT NULL,
@@ -19,9 +23,11 @@ CREATE TABLE IF NOT EXISTS activities (
   PRIMARY KEY (id)
 );
 
+TRUNCATE TABLE activities;
+
 CREATE TABLE IF NOT EXISTS best_efforts (
-  id INT NOT NULL,
-  activity_id INT NOT NULL,
+  id BIGINT NOT NULL,
+  activity_id BIGINT NOT NULL,
   name VARCHAR NOT NULL,
   distance FLOAT NOT NULL,
   moving_time INT NOT NULL,
@@ -29,11 +35,13 @@ CREATE TABLE IF NOT EXISTS best_efforts (
   start_date DATETIME NOT NULL,
   pr_rank INT NOT NULL,
   PRIMARY KEY (id),
-  FOREIGN KEY (activity_id) REFERENCES activities(id)
+  -- FOREIGN KEY (activity_id) REFERENCES activities(id)
 );
 
+TRUNCATE TABLE best_efforts;
+
 CREATE TABLE IF NOT EXISTS segments (
-  id INT NOT NULL,
+  id BIGINT NOT NULL,
   name VARCHAR NOT NULL,
   activity_type VARCHAR NOT NULL,
   distance FLOAT NOT NULL,
@@ -49,15 +57,19 @@ CREATE TABLE IF NOT EXISTS segments (
   PRIMARY KEY (id)
 );
 
+TRUNCATE TABLE segments;
+
 CREATE TABLE IF NOT EXISTS segment_efforts (
-  id INT NOT NULL,
-  activity_id INT NOT NULL,
-  segment_id INT NOT NULL,
+  id BIGINT NOT NULL,
+  activity_id BIGINT NOT NULL,
+  segment_id BIGINT NOT NULL,
   average_cadence FLOAT NOT NULL,
   average_heartrate FLOAT NOT NULL,
   max_heartrate FLOAT NOT NULL,
   pr_rank INT NOT NULL,
   PRIMARY KEY (id),
-  FOREIGN KEY (segment_id) REFERENCES segments(id),
-  FOREIGN KEY (activity_id) REFERENCES activities(id)
+  -- FOREIGN KEY (segment_id) REFERENCES segments(id),
+  -- FOREIGN KEY (activity_id) REFERENCES activities(id)
 );
+
+TRUNCATE TABLE segment_efforts;

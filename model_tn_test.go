@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -9,7 +10,7 @@ import (
 )
 
 func TestInsertQueries(t *testing.T) {
-	queries := insertActivityQueries(strava.ActivityDetailed{
+	queries := insertActivityQueries(&strava.ActivityDetailed{
 		ActivitySummary: strava.ActivitySummary{
 			Id:   1,
 			Name: "Test",
@@ -31,8 +32,6 @@ func TestInsertQueries(t *testing.T) {
 	assert.NoError(t, err)
 
 	for _, query := range queries {
-
-		_, err := db.Exec(query)
-		assert.NoError(t, err)
+		assert.NoError(t, db.Exec(context.TODO(), query))
 	}
 }
