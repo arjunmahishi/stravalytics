@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"strings"
 	"testing"
 
@@ -10,6 +11,10 @@ import (
 )
 
 func TestInsertQueries(t *testing.T) {
+	if os.Getenv("INTEGRATION_TEST") == "" {
+		t.Skip("skipping integration test")
+	}
+
 	queries := insertActivityQueries(&strava.ActivityDetailed{
 		ActivitySummary: strava.ActivitySummary{
 			Id:   1,

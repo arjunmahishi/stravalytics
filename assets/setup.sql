@@ -2,6 +2,8 @@ CREATE DATABASE IF NOT EXISTS strava;
 
 USE strava;
 
+DROP TABLE IF EXISTS activities;
+
 CREATE TABLE IF NOT EXISTS activities (
   id BIGINT NOT NULL,
   name VARCHAR NOT NULL,
@@ -11,8 +13,10 @@ CREATE TABLE IF NOT EXISTS activities (
   total_elevation_gain FLOAT NOT NULL,
   type VARCHAR NOT NULL,
   start_date DATETIME NOT NULL,
-  start_latlng VARCHAR NOT NULL,
-  end_latlng VARCHAR NOT NULL,
+  start_latitude FLOAT NOT NULL,
+  start_longitude FLOAT NOT NULL,
+  end_latitude FLOAT NOT NULL,
+  end_longitude FLOAT NOT NULL,
   average_speed FLOAT NOT NULL,
   max_speed FLOAT NOT NULL,
   average_cadence FLOAT NOT NULL,
@@ -23,7 +27,7 @@ CREATE TABLE IF NOT EXISTS activities (
   PRIMARY KEY (id)
 );
 
-TRUNCATE TABLE activities;
+DROP TABLE IF EXISTS best_efforts;
 
 CREATE TABLE IF NOT EXISTS best_efforts (
   id BIGINT NOT NULL,
@@ -38,7 +42,7 @@ CREATE TABLE IF NOT EXISTS best_efforts (
   -- FOREIGN KEY (activity_id) REFERENCES activities(id)
 );
 
-TRUNCATE TABLE best_efforts;
+DROP TABLE IF EXISTS segments;
 
 CREATE TABLE IF NOT EXISTS segments (
   id BIGINT NOT NULL,
@@ -57,7 +61,7 @@ CREATE TABLE IF NOT EXISTS segments (
   PRIMARY KEY (id)
 );
 
-TRUNCATE TABLE segments;
+DROP TABLE IF EXISTS segment_efforts;
 
 CREATE TABLE IF NOT EXISTS segment_efforts (
   id BIGINT NOT NULL,
@@ -72,4 +76,3 @@ CREATE TABLE IF NOT EXISTS segment_efforts (
   -- FOREIGN KEY (activity_id) REFERENCES activities(id)
 );
 
-TRUNCATE TABLE segment_efforts;

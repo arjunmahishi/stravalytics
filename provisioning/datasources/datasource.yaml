@@ -4,15 +4,11 @@ datasources:
   - name: ClickHouse
     type: grafana-clickhouse-datasource
     access: proxy
-    url: http://host.docker.internal:8123
-    basicAuth: false
     isDefault: true
     jsonData:
       addCorsHeader: true
       defaultDatabase: strava
-      queryProcessingStage: 2
-      timeout: 60
-    secureJsonData:
-      password: ""
+      port: 9000
+      server: host.docker.internal
     version: 1
     editable: true
