@@ -19,23 +19,36 @@ var (
 	authenticator *strava.OAuthAuthenticator
 	server        *http.Server
 
-	port     = flag.Int("port", 3000, "Port for the local server")
-	workers  = flag.Int("concurrency", runtime.NumCPU(), "Number of concurrent workers")
+	port     = flag.Int("port", 8000, "Port for the local server")
+	workers  = flag.Int("max-concurrency", runtime.NumCPU(), "Number of concurrent workers")
 	dataFile = flag.String("data", "activities.json", "File to store activity data")
 	dbHost   = flag.String("db-host", "localhost", "ClickHouse host")
 	dbPort   = flag.Int("db-port", 9000, "ClickHouse port")
+	sync     = flag.Bool("sync", false, "Run only the sync process")
+	load     = flag.Bool("load", false, "Only load the already synced data into the db")
 )
 
 func main() {
 	flag.Parse()
 	runtime.GOMAXPROCS(runtime.NumCPU())
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	db, err := newDB()
-	if err != nil {
-		log.Fatal(err)
+	syncLoadXNOR := (*sync && *load) || (!*sync && !*load)
+
+	if *sync || syncLoadXNOR {
+		if err := runSync(); err != nil {
+			log.Fatal(err)
+		}
 	}
 
-	loadData(db)
+	if *load || syncLoadXNOR {
+		db, err := newDB()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		loadData(db)
+	}
 }
 
 func loadData(db driver.Conn) {
@@ -68,10 +81,10 @@ func loadData(db driver.Conn) {
 	fmt.Print("...DONE\n")
 }
 
-func runSync() {
+func runSync() error {
 	clientID, err := strconv.Atoi(os.Getenv("STRAVA_CLIENT_ID"))
 	if err != nil {
-		log.Fatal("Invalid STRAVA_CLIENT_ID")
+		return err
 	}
 
 	strava.ClientId = clientID
@@ -88,7 +101,7 @@ func runSync() {
 
 	path, err := authenticator.CallbackPath()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	http.HandleFunc(path, authenticator.HandlerFunc(oAuthSuccess, oAuthFailure))
@@ -102,6 +115,7 @@ func runSync() {
 	fmt.Printf("Visit %s to authenticate\n", fmt.Sprintf("http://localhost:%d/login", *port))
 	server = &http.Server{Addr: fmt.Sprintf(":%d", *port)}
 	log.Println(server.ListenAndServe())
+	return nil
 }
 
 func oAuthSuccess(auth *strava.AuthorizationResponse, w http.ResponseWriter, r *http.Request) {

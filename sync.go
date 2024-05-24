@@ -12,7 +12,7 @@ import (
 
 type activityDetailsFunc func() (*strava.ActivityDetailed, error)
 
-func detailWorkers(
+func spawnWorker(
 	id int, jobs <-chan activityDetailsFunc, results chan<- *strava.ActivityDetailed,
 ) {
 	for do := range jobs {
@@ -99,9 +99,9 @@ func getActivityDetails(
 	allDetails := []*strava.ActivityDetailed{}
 
 	// start workers
-	for i := 0; i < *workers; i++ {
+	for i := 0; i < min(*workers, len(activities)); i++ {
 		i := i
-		go detailWorkers(i, jobsChan, resultsChan)
+		go spawnWorker(i, jobsChan, resultsChan)
 	}
 
 	for _, activity := range activities {
